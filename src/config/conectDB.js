@@ -1,6 +1,8 @@
 const Sequelize = require("sequelize");
 
 // Option 1: Passing parameters separately
+// create migration
+// npx sequelize-cli db:migrate
 const sequelize = new Sequelize("hieudang", "root", null, {
     host: "localhost",
     dialect: "mysql",

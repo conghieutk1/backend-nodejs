@@ -10,7 +10,13 @@ let handleUserLogin = (email, password) => {
             if (isExist) {
                 //user already exist
                 let user = await db.User.findOne({
-                    attributes: ["email", "roleId", "password"],
+                    attributes: [
+                        "email",
+                        "roleId",
+                        "password",
+                        "firstName",
+                        "lastName",
+                    ],
                     where: { email: email },
                     raw: true,
                 });
@@ -205,10 +211,34 @@ let updateUser = (data) => {
     });
 };
 
+let getAllCodeService = (typeInput) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!typeInput) {
+                resolve({
+                    errCode: 1,
+                    errMessage: "Missing required parameters!",
+                });
+            } else {
+                let res = {};
+                let allcode = await db.Allcode.findAll({
+                    where: { type: typeInput },
+                });
+                res.errCode = 0;
+                res.data = allcode;
+                resolve(res);
+            }
+        } catch (e) {
+            reject(e);
+        }
+    });
+};
+
 module.exports = {
     handleUserLogin: handleUserLogin,
     getAllUsers: getAllUsers,
     createNewUser: createNewUser,
     deleteUser: deleteUser,
     updateUser: updateUser,
+    getAllCodeService: getAllCodeService,
 };
