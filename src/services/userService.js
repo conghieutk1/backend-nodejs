@@ -133,6 +133,7 @@ let createNewUser = (data) => {
                     gender: data.gender,
                     roleId: data.roleId,
                     positionId: data.positionId,
+                    image: data.avatar,
                 });
                 resolve({
                     errCode: 0,
@@ -173,7 +174,7 @@ let deleteUser = (userId) => {
 let updateUser = (data) => {
     return new Promise(async (resolve, reject) => {
         try {
-            console.log("id: ", data.id, " data", data);
+            //console.log("id: ", data.id, " data", data);
             if (!data.id || !data.roleId || !data.positionId || !data.gender) {
                 resolve({
                     errCode: 2,
@@ -192,7 +193,7 @@ let updateUser = (data) => {
                 user.positionId = data.positionId;
                 user.gender = data.gender;
                 user.phonenumber = data.phonenumber;
-
+                user.image = data.avatar;
                 await user.save();
 
                 // await db.User.save({

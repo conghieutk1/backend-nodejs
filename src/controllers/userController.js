@@ -46,7 +46,7 @@ let handleCreateNewUser = async (req, res) => {
 };
 
 let handleEditUser = async (req, res) => {
-    console.log("check req.body: ", req.body);
+    //console.log("check req.body: ", req.body);
     let data = req.body;
     let message = await userService.updateUser(data);
     return res.status(200).json(message);
