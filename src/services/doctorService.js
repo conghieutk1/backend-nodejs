@@ -1,6 +1,7 @@
 import db from "../models/index";
 require("dotenv").config();
 import _ from "lodash";
+import emailService from "./emailService";
 
 const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 
@@ -308,6 +309,11 @@ const getScheduleDoctorByDate = (doctorId, date) => {
                             as: "timeTypeData",
                             attributes: ["valueEn", "valueVi"],
                         },
+                        {
+                            model: db.User,
+                            as: "doctorData",
+                            attributes: ["firstName", "lastName"],
+                        },
                     ],
                     raw: false,
                     nest: true,
@@ -373,6 +379,263 @@ const getExtraInforDoctorById = (doctorId) => {
         }
     });
 };
+const getProfileDoctorById = (doctorId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!doctorId) {
+                resolve({
+                    errCode: 1,
+                    errMessage: "Missing required parameter",
+                });
+            } else {
+                let data = await db.User.findOne({
+                    where: {
+                        id: doctorId,
+                    },
+                    attributes: {
+                        exclude: ["password"],
+                    },
+                    include: [
+                        {
+                            model: db.Markdown,
+                            attributes: [
+                                "contentHTML",
+                                "contentMarkdown",
+                                "description",
+                            ],
+                        },
+                        {
+                            model: db.Allcode,
+                            as: "positionData",
+                            attributes: ["valueEn", "valueVi"],
+                        },
+                        {
+                            model: db.Doctor_Infor,
+                            attributes: {
+                                exclude: ["id", "createdAt", "updatedAt"],
+                            },
+                            include: [
+                                {
+                                    model: db.Allcode,
+                                    as: "priceTypeData",
+                                    attributes: ["valueEn", "valueVi"],
+                                },
+                                {
+                                    model: db.Allcode,
+                                    as: "paymentTypeData",
+                                    attributes: ["valueEn", "valueVi"],
+                                },
+                                {
+                                    model: db.Allcode,
+                                    as: "provinceTypeData",
+                                    attributes: ["valueEn", "valueVi"],
+                                },
+                            ],
+                        },
+                    ],
+                    raw: false,
+                    nest: true,
+                });
+                if (data && data.image) {
+                    data.image = new Buffer(data.image, "base64").toString(
+                        "binary"
+                    );
+                }
+                if (!data) data = {};
+                resolve({
+                    errCode: 0,
+                    data: data,
+                });
+            }
+        } catch (e) {
+            reject(e);
+        }
+    });
+};
+const getListBookingAppointment = (date) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!date) {
+                resolve({
+                    errCode: 1,
+                    errMessage: "Missing required parameter",
+                });
+            } else {
+                let data = await db.Booking.findAll({
+                    where: {
+                        //statusId: "S2",
+                        //doctorId: doctorId,
+                        date: date,
+                    },
+                    order: [["createdAt", "ASC"]],
+                    attributes: {
+                        exclude: ["token"],
+                    },
+
+                    include: [
+                        {
+                            model: db.User,
+                            as: "patientData",
+                            attributes: [
+                                "email",
+                                "firstName",
+                                "address",
+                                "gender",
+                                "phonenumber",
+                            ],
+                            include: [
+                                {
+                                    model: db.Allcode,
+                                    as: "genderData",
+                                    attributes: ["valueEn", "valueVi"],
+                                },
+                            ],
+                        },
+                        {
+                            model: db.Allcode,
+                            as: "timeTypeDataBooking",
+                            attributes: ["valueEn", "valueVi"],
+                        },
+                        {
+                            model: db.User,
+                            as: "doctorDataBooking",
+                            attributes: ["firstName", "lastName"],
+                        },
+                        {
+                            model: db.Allcode,
+                            as: "statusDataBooking",
+                            attributes: ["valueEn", "valueVi"],
+                        },
+                    ],
+                    raw: false,
+                    nest: true,
+                });
+
+                // console.log("data from getListBookingAppointment = ", data);
+
+                resolve({
+                    errCode: 0,
+                    data: data,
+                });
+            }
+        } catch (e) {
+            reject(e);
+        }
+    });
+};
+
+const sendDoneAppointment = (data) => {
+    return new Promise(async (resolve, reject) => {
+        console.log("data = ", data);
+        try {
+            if (
+                !data.doctorId ||
+                !data.patientId ||
+                !data.timeType ||
+                !data.date ||
+                !data.statusId ||
+                !data.button
+            ) {
+                resolve({
+                    errCode: 1,
+                    errMessage: "Missing required parameter",
+                });
+            } else {
+                if (data.button === "CONFIRM") {
+                    let appointment = await db.Booking.findOne({
+                        where: {
+                            doctorId: data.doctorId,
+                            patientID: data.patientId,
+                            timeType: data.timeType,
+                            date: data.date,
+                            statusId: "S2",
+                        },
+                        raw: false, //save = false để trả ra object sequelize => dùng được hàm save()
+                    });
+
+                    if (appointment) {
+                        appointment.statusId = "S3";
+                        await appointment.save();
+                    } else if (data.statusId === "S1") {
+                        resolve({
+                            errCode: 2,
+                            errMessage:
+                                "Cuộc hẹn chưa được xác nhận bởi người dùng!",
+                        });
+                        return;
+                    } else if (data.statusId === "S3") {
+                        resolve({
+                            errCode: 3,
+                            errMessage:
+                                "Điều này không thể thực hiện được vì cuộc hẹn đã được cập nhật thành Xong!",
+                        });
+                        return;
+                    } else if (data.statusId === "S4") {
+                        resolve({
+                            errCode: 4,
+                            errMessage:
+                                "Điều này không thể thực hiện được vì cuộc hẹn đã được cập nhật thành Hủy!",
+                        });
+                        return;
+                    }
+
+                    resolve({
+                        errCode: 0,
+                        errMessage: "Cuộc hẹn đã được cập nhật thành Xong!",
+                    });
+                } else if (data.button === "CANCEL") {
+                    if (data.statusId === "S4") {
+                        resolve({
+                            errCode: 2,
+                            errMessage:
+                                "Điều này không thể thực hiện được vì cuộc hẹn đã được cập nhật thành Hủy!",
+                        });
+                        return;
+                    }
+                    if (data.statusId === "S3") {
+                        resolve({
+                            errCode: 3,
+                            errMessage:
+                                "Điều này không thể thực hiện được vì cuộc hẹn đã được cập nhật thành Đã khám xong!",
+                        });
+                        return;
+                    }
+                    let appointment = await db.Booking.findOne({
+                        where: {
+                            doctorId: data.doctorId,
+                            patientID: data.patientId,
+                            timeType: data.timeType,
+                            date: data.date,
+                        },
+                        raw: false, //save = false để trả ra object sequelize => dùng được hàm save()
+                    });
+
+                    if (appointment) {
+                        appointment.statusId = "S4";
+                        await appointment.save();
+                    }
+
+                    await emailService.sendEmailCancelAppointment({
+                        receiverMail: data.emailPatient,
+                        emailContact: "hieu37.nghiadung@gmail.com",
+                        patientName: data.fullName,
+                        time: data.dateForEmail,
+                        nameClinic: "Phòng khám Quốc tế EXSON",
+                        addressClinic: "250 Bạch Mai",
+                        phoneNumberContact: "0845568586",
+                        language: data.language,
+                    });
+                    resolve({
+                        errCode: 0,
+                        errMessage: "Cuộc hẹn đã được cập nhật thành Hủy!",
+                    });
+                }
+            }
+        } catch (e) {
+            reject(e);
+        }
+    });
+};
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
     getAllDoctors: getAllDoctors,
@@ -381,4 +644,7 @@ module.exports = {
     bulkCreateSchedule: bulkCreateSchedule,
     getScheduleDoctorByDate: getScheduleDoctorByDate,
     getExtraInforDoctorById: getExtraInforDoctorById,
+    getProfileDoctorById: getProfileDoctorById,
+    getListBookingAppointment: getListBookingAppointment,
+    sendDoneAppointment: sendDoneAppointment,
 };

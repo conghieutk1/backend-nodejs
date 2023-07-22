@@ -18,9 +18,30 @@ module.exports = {
                 type: Sequelize.INTEGER,
             },
             date: {
-                type: Sequelize.DATE,
+                type: Sequelize.STRING,
             },
             timeType: {
+                type: Sequelize.STRING,
+            },
+            token: {
+                type: Sequelize.STRING,
+            },
+            fullName: {
+                type: Sequelize.STRING,
+            },
+            phoneNumber: {
+                type: Sequelize.STRING,
+            },
+            address: {
+                type: Sequelize.STRING,
+            },
+            gender: {
+                type: Sequelize.STRING,
+            },
+            dob: {
+                type: Sequelize.STRING,
+            },
+            reason: {
                 type: Sequelize.STRING,
             },
             createdAt: {

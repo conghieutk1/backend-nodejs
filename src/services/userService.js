@@ -11,6 +11,7 @@ let handleUserLogin = (email, password) => {
                 //user already exist
                 let user = await db.User.findOne({
                     attributes: [
+                        "id",
                         "email",
                         "roleId",
                         "password",
@@ -80,6 +81,7 @@ let getAllUsers = (userId) => {
                     attributes: {
                         exclude: ["password"],
                     },
+                    order: [["createdAt", "ASC"]],
                 });
             }
             if (userId && userId !== "ALL") {
@@ -123,18 +125,34 @@ let createNewUser = (data) => {
                 let hashPasswordFromBcryptjs = await hashUserPassword(
                     data.password
                 );
-                await db.User.create({
-                    email: data.email,
-                    password: hashPasswordFromBcryptjs,
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    address: data.address,
-                    phonenumber: data.phonenumber,
-                    gender: data.gender,
-                    roleId: data.roleId,
-                    positionId: data.positionId,
-                    image: data.avatar,
-                });
+                if (data.roleId === "R3") {
+                    await db.User.create({
+                        email: data.email,
+                        password: hashPasswordFromBcryptjs,
+                        firstName: data.firstName,
+                        lastName: data.lastName,
+                        address: data.address,
+                        phonenumber: data.phonenumber,
+                        gender: data.gender,
+                        roleId: data.roleId,
+                        //positionId: data.positionId,
+                        image: data.avatar,
+                    });
+                } else {
+                    await db.User.create({
+                        email: data.email,
+                        password: hashPasswordFromBcryptjs,
+                        firstName: data.firstName,
+                        lastName: data.lastName,
+                        address: data.address,
+                        phonenumber: data.phonenumber,
+                        gender: data.gender,
+                        roleId: data.roleId,
+                        positionId: data.positionId,
+                        image: data.avatar,
+                    });
+                }
+
                 resolve({
                     errCode: 0,
                     errMessage: "OK",
@@ -175,7 +193,7 @@ let updateUser = (data) => {
     return new Promise(async (resolve, reject) => {
         try {
             //console.log("id: ", data.id, " data", data);
-            if (!data.id || !data.roleId || !data.positionId || !data.gender) {
+            if (!data.id || !data.roleId || !data.gender) {
                 resolve({
                     errCode: 2,
                     errMessage: "Missing required parameters",
@@ -190,7 +208,11 @@ let updateUser = (data) => {
                 user.lastName = data.lastName;
                 user.address = data.address;
                 user.roleId = data.roleId;
-                user.positionId = data.positionId;
+                if (data.roleId === "R3") {
+                    user.positionId = "";
+                } else {
+                    user.positionId = data.positionId;
+                }
                 user.gender = data.gender;
                 user.phonenumber = data.phonenumber;
                 user.image = data.avatar;
